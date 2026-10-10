@@ -1,0 +1,455 @@
+<title>Maceió Urna a Urna</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: cabeçalho editorial à esquerda → mapa grande com painel lateral → ranking de bairros → notas. */
+:root {
+  --bg: #f7f6f1;
+  --surface: #ffffff;
+  --ink: #1b1c17;
+  --ink-2: #55564b;
+  --ink-3: #8b8c7e;
+  --line: rgba(27, 28, 23, 0.10);
+  --line-2: rgba(27, 28, 23, 0.18);
+  --sea: #dbe4e6;
+  --land: #f4f3ec;
+  --land-out: #e7e6dd;
+  --bairro-line: #c7c6b8;
+  --label: #8e8e7f;
+  --water-label: #7f99a0;
+  --lula: #cf2f3c;
+  --flavio: #1f4fbf;
+  --mid: #e9e7df;
+  --dot-stroke: rgba(255, 255, 255, 0.85);
+  --hl: #1b1c17;
+  --font-display: "Newsreader", "Iowan Old Style", Georgia, serif;
+  --font-body: "Figtree", "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --radius: 12px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12130f; --surface: #1a1b16; --ink: #efede5; --ink-2: #b4b3a6; --ink-3: #7d7d70;
+    --line: rgba(239, 237, 229, 0.10); --line-2: rgba(239, 237, 229, 0.20);
+    --sea: #0e171b; --land: #1d1e19; --land-out: #161712; --bairro-line: #383930;
+    --label: #807f71; --water-label: #4f6e78;
+    --lula: #ff5b66; --flavio: #6b98ff; --mid: #3a3b33; --dot-stroke: rgba(18, 19, 15, 0.9); --hl: #efede5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12130f; --surface: #1a1b16; --ink: #efede5; --ink-2: #b4b3a6; --ink-3: #7d7d70;
+  --line: rgba(239, 237, 229, 0.10); --line-2: rgba(239, 237, 229, 0.20);
+  --sea: #0e171b; --land: #1d1e19; --land-out: #161712; --bairro-line: #383930;
+  --label: #807f71; --water-label: #4f6e78;
+  --lula: #ff5b66; --flavio: #6b98ff; --mid: #3a3b33; --dot-stroke: rgba(18, 19, 15, 0.9); --hl: #efede5;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: clamp(16px, 4vw, 48px); padding-block: clamp(28px, 5vw, 64px) 64px; }
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; color: var(--ink-3); }
+
+header { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 64px); align-items: end; margin-bottom: clamp(24px, 4vw, 40px); }
+h1 { font-family: var(--font-display); font-weight: 500; font-size: clamp(2.6rem, 6.4vw, 4.5rem); line-height: 1.02; letter-spacing: -0.03em; margin: 10px 0 14px; text-wrap: balance; }
+h1 em { font-style: italic; color: var(--ink-2); }
+.lede { color: var(--ink-2); max-width: 54ch; margin: 0; font-size: 1.0625rem; }
+.lede b { font-weight: 600; color: var(--ink); }
+.score { display: grid; gap: 14px; }
+.score-row { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 12px; border-top: 1px solid var(--line-2); padding-top: 10px; }
+.score-row .who { display: flex; align-items: center; gap: 10px; font-weight: 500; }
+.score-row .pct { font-family: var(--font-display); font-size: clamp(1.9rem, 3.4vw, 2.5rem); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.score-row .sub { grid-column: 1 / -1; font-size: 0.8125rem; color: var(--ink-3); margin-top: -6px; }
+.sw { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.sw.l { background: var(--lula); } .sw.f { background: var(--flavio); } .sw.o { background: var(--ink-3); }
+.splitbar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--mid); }
+.splitbar span { display: block; height: 100%; }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+.mapcard { position: relative; background: var(--sea); border-radius: var(--radius); overflow: hidden; border: 1px solid var(--line); }
+#map { display: block; width: 100%; height: clamp(440px, 74vh, 760px); touch-action: none; cursor: grab; }
+#map:active { cursor: grabbing; }
+.bairro { fill: var(--land); stroke: var(--bairro-line); stroke-linejoin: round; }
+.bairro.empty { fill: url(#hatch); }
+.bairro.hl { stroke: var(--hl); }
+.viz { fill: var(--land-out); stroke: var(--bairro-line); }
+.blabel { fill: var(--label); font-family: var(--font-body); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; text-anchor: middle; pointer-events: none; paint-order: stroke; stroke: var(--land); stroke-linejoin: round; }
+.vlabel { fill: var(--ink-3); font-family: var(--font-display); font-style: italic; text-anchor: middle; pointer-events: none; opacity: 0.8; }
+.wlabel { fill: var(--water-label); font-family: var(--font-display); font-style: italic; text-anchor: middle; pointer-events: none; letter-spacing: 0.04em; }
+.dot { stroke: var(--dot-stroke); }
+.dot.sel { stroke: var(--hl); }
+
+.controls { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+.controls > * { pointer-events: auto; }
+.seg { display: inline-flex; background: var(--surface); border: 1px solid var(--line-2); border-radius: 99px; padding: 3px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.seg button { font: 500 0.8125rem var(--font-body); color: var(--ink-2); background: none; border: 0; border-radius: 99px; padding: 6px 14px; cursor: pointer; transition: background 150ms var(--ease), color 150ms var(--ease); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.zoom { display: inline-flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; }
+.zoom button { width: 34px; height: 32px; border: 0; background: none; color: var(--ink); font: 500 1.05rem var(--font-body); cursor: pointer; }
+.zoom button + button { border-top: 1px solid var(--line); }
+.zoom button:hover, .seg button:hover { color: var(--ink); }
+button:focus-visible { outline: 2px solid var(--flavio); outline-offset: 2px; }
+.legend { position: absolute; left: 12px; bottom: 12px; background: var(--surface); border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 12px; font-size: 0.75rem; color: var(--ink-2); display: grid; gap: 6px; max-width: calc(100% - 24px); }
+.legend .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.legend .item { display: inline-flex; align-items: center; gap: 6px; }
+.ramp { width: 168px; max-width: 46vw; height: 8px; border-radius: 99px; }
+.ramp-labels { display: flex; justify-content: space-between; width: 168px; max-width: 46vw; font-size: 0.6875rem; color: var(--ink-3); }
+.credit { position: absolute; right: 10px; bottom: 8px; font-size: 0.6875rem; color: var(--ink-3); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; display: grid; gap: 14px; min-width: 0; }
+.panel h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.45rem; line-height: 1.15; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.panel .meta { font-size: 0.8125rem; color: var(--ink-3); margin-top: 4px; }
+.bars { display: grid; gap: 10px; }
+.bar { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 0.875rem; }
+.bar .track { grid-column: 1 / -1; height: 6px; background: var(--mid); border-radius: 99px; overflow: hidden; }
+.bar .fill { height: 100%; border-radius: 99px; transition: width 400ms var(--ease); }
+.bar .v { color: var(--ink-2); font-size: 0.8125rem; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; border-top: 1px solid var(--line); padding-top: 14px; }
+.facts div { display: grid; gap: 2px; }
+.facts dt { font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.facts dd { margin: 0; font-size: 0.9375rem; }
+.hint { font-size: 0.8125rem; color: var(--ink-3); margin: 0; }
+.verdict { display: inline-flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--line-2); width: fit-content; }
+
+section.bairros { margin-top: clamp(48px, 7vw, 88px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr); gap: clamp(24px, 4vw, 56px); }
+h3 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.8rem, 3.4vw, 2.4rem); line-height: 1.08; letter-spacing: -0.02em; margin: 8px 0 12px; text-wrap: balance; }
+.intro p { color: var(--ink-2); margin: 0 0 12px; max-width: 46ch; }
+.list { display: grid; }
+.list-head, .li { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 4.2rem; gap: 14px; align-items: center; }
+.list-head { font-size: 0.6875rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 0 8px 8px; border-bottom: 1px solid var(--line-2); }
+.list-head span:last-child { text-align: right; }
+.li { padding: 9px 8px; border-bottom: 1px solid var(--line); background: none; border-left: 0; border-right: 0; border-top: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; transition: background 150ms var(--ease); }
+.li:hover, .li.on { background: var(--surface); }
+.li .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.li .nm small { display: block; font-size: 0.75rem; font-weight: 400; color: var(--ink-3); }
+.dv { position: relative; height: 18px; }
+.dv .axis { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line-2); }
+.dv .seg-l, .dv .seg-f { position: absolute; top: 4px; height: 10px; }
+.dv .seg-l { right: 50%; background: var(--lula); border-radius: 99px 0 0 99px; }
+.dv .seg-f { left: 50%; background: var(--flavio); border-radius: 0 99px 99px 0; }
+.li .mg { text-align: right; font-size: 0.8125rem; }
+.dv-scale { display: flex; justify-content: space-between; font-size: 0.6875rem; color: var(--ink-3); padding: 8px 8px 0; }
+
+.notes { margin-top: clamp(48px, 7vw, 80px); border-top: 1px solid var(--line-2); padding-top: 22px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 40px; font-size: 0.875rem; color: var(--ink-2); }
+.notes h4 { font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); margin: 0 0 6px; font-weight: 600; }
+.notes p { margin: 0 0 8px; }
+.notes a { color: var(--ink); }
+.notes .byline { grid-column: 1 / -1; margin: 8px 0 0; padding-top: 16px; border-top: 1px solid var(--line); font-size: 0.8125rem; color: var(--ink-3); }
+.notes .byline a { color: var(--ink-2); text-decoration: none; border-bottom: 1px solid var(--line-2); }
+.notes .byline a:hover { color: var(--ink); }
+
+@media (max-width: 920px) {
+  header { grid-template-columns: 1fr; align-items: start; }
+  .stage { grid-template-columns: 1fr; }
+  section.bairros { grid-template-columns: 1fr; }
+  .notes { grid-template-columns: 1fr; }
+}
+@media (max-width: 520px) {
+  #map { height: 72vh; min-height: 420px; }
+  .list-head, .li { grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 3.4rem; gap: 8px; }
+  .legend { padding: 7px 10px; }
+  .credit { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Eleições 2026 · Presidente · 1º turno, 4 de outubro</div>
+      <h1>Maceió, <em>urna a urna</em></h1>
+      <p class="lede" id="lede"></p>
+    </div>
+    <div class="score" id="score"></div>
+  </header>
+
+  <div class="stage">
+    <div class="mapcard">
+      <svg id="map" role="img" aria-label="Mapa de Maceió com os locais de votação coloridos pelo candidato mais votado"></svg>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Modo de cor">
+          <button id="m-win" aria-pressed="true">Vencedor</button>
+          <button id="m-mrg" aria-pressed="false">Margem</button>
+        </div>
+        <div class="zoom">
+          <button id="z-in" aria-label="Aproximar">+</button>
+          <button id="z-out" aria-label="Afastar">−</button>
+          <button id="z-rst" aria-label="Ver a cidade toda" title="Ver a cidade toda">⤢</button>
+        </div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="credit">Levantamento: Vinícius Dias (@euvinidiass) · Fonte: TSE · Bairros: IBGE 2022</div>
+    </div>
+    <aside class="panel" id="panel" aria-live="polite"></aside>
+  </div>
+
+  <section class="bairros">
+    <div class="intro">
+      <div class="eyebrow">Por bairro</div>
+      <h3>Onde cada um foi mais forte</h3>
+      <p>Soma de todos os locais de votação dentro de cada bairro, em votos válidos. Os bairros vão do mais lulista ao mais bolsonarista.</p>
+      <p>Toque num bairro para vê-lo no mapa.</p>
+    </div>
+    <div>
+      <div class="list-head"><span>Bairro</span><span style="text-align:center">Lula ← → Flávio</span><span>Margem</span></div>
+      <div class="list" id="list"></div>
+      <div class="dv-scale"><span>Lula 60%</span><span>50%</span><span>Flávio 60%</span></div>
+    </div>
+  </section>
+
+  <footer class="notes">
+    <div>
+      <h4>Como ler</h4>
+      <p>Cada ponto é um local de votação (escola, faculdade, clube) e reúne todas as seções que votaram ali. O tamanho acompanha o número de votos. Percentuais são sobre votos válidos, sem brancos e nulos, como o TSE divulga.</p>
+    </div>
+    <div>
+      <h4>Método</h4>
+      <p>Votos por seção eleitoral cruzados com o cadastro de locais de votação do 1º turno, que traz latitude e longitude oficiais. O bairro de cada local vem do limite de bairros do IBGE (Censo 2022). Bairros hachurados não têm local de votação; Mutange e Bebedouro foram esvaziados pelo afundamento do solo causado pela mineração da Braskem.</p>
+    </div>
+    <div>
+      <h4>Fontes</h4>
+      <p>TSE, Portal de Dados Abertos: Votação por seção eleitoral 2026 (Presidente) e Eleitorado por local de votação 2026. IBGE, malha de bairros 2022, via pacote geobr (Ipea).</p>
+      <p>O ponto do Complexo Penitenciário reúne presos provisórios com direito a voto.</p>
+    </div>
+    <p class="byline">Levantamento e mapa por <a href="https://instagram.com/euvinidiass" target="_blank" rel="noopener">Vinícius Dias (@euvinidiass)</a></p>
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const GEO = __GEO__;
+const DATA = __DATA__;
+
+const fmt = n => n.toLocaleString('pt-BR');
+const pct = (x, d = 1) => (x * 100).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }) + '%';
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// ---------- dados derivados ----------
+const locais = DATA.locais.map(d => {
+  const val = d.L + d.F + d.O;
+  return { ...d, val, pl: d.L / val, pf: d.F / val, po: d.O / val, m: (d.F - d.L) / val };
+});
+const T = locais.reduce((a, d) => { a.L += d.L; a.F += d.F; a.O += d.O; a.Br += d.Br; a.Nu += d.Nu; a.ap += d.ap; return a; }, { L: 0, F: 0, O: 0, Br: 0, Nu: 0, ap: 0 });
+T.val = T.L + T.F + T.O; T.pf = T.F / T.val; T.pl = T.L / T.val;
+const winsF = locais.filter(d => d.F > d.L).length, winsL = locais.length - winsF;
+
+const byB = d3.rollups(locais, v => {
+  const s = { L: d3.sum(v, d => d.L), F: d3.sum(v, d => d.F), O: d3.sum(v, d => d.O), Br: d3.sum(v, d => d.Br), Nu: d3.sum(v, d => d.Nu), ap: d3.sum(v, d => d.ap), n: v.length };
+  s.val = s.L + s.F + s.O; s.pl = s.L / s.val; s.pf = s.F / s.val; s.m = (s.F - s.L) / s.val; return s;
+}, d => d.b).map(([b, s]) => ({ b, ...s })).sort((a, b) => a.m - b.m);
+const bMap = new Map(byB.map(d => [d.b, d]));
+
+// ---------- cabeçalho ----------
+const others = DATA.candidatos.filter(c => ![13, 22, 95, 96].includes(c.num)).sort((a, b) => b.votos - a.votos);
+const top3 = others.slice(0, 3).map(c => ({ 70: 'Augusto Cury', 14: 'Renan Santos', 55: 'Ronaldo Caiado' }[c.num] || c.nome)).join(', ');
+document.getElementById('lede').innerHTML =
+  `Cada ponto é um local de votação. <b>Azul</b> onde Flávio Bolsonaro teve mais votos, <b>vermelho</b> onde deu Lula. Flávio venceu em <b>${winsF} dos ${locais.length}</b> locais da cidade; Lula, em ${winsL}.`;
+document.getElementById('score').innerHTML = `
+  <div class="splitbar" aria-hidden="true"><span style="width:${T.F / T.val * 100}%;background:var(--flavio)"></span><span style="width:${T.O / T.val * 100}%;background:var(--ink-3)"></span><span style="width:${T.L / T.val * 100}%;background:var(--lula)"></span></div>
+  <div class="score-row"><span class="who"><span class="sw f"></span>Flávio Bolsonaro <span style="color:var(--ink-3);font-weight:400">PL</span></span><span class="pct">${pct(T.pf)}</span><span class="sub num">${fmt(T.F)} votos</span></div>
+  <div class="score-row"><span class="who"><span class="sw l"></span>Lula <span style="color:var(--ink-3);font-weight:400">PT</span></span><span class="pct">${pct(T.pl)}</span><span class="sub num">${fmt(T.L)} votos</span></div>
+  <div class="score-row"><span class="who"><span class="sw o"></span>Outros 11 candidatos</span><span class="pct" style="font-size:1.5rem;color:var(--ink-2)">${pct(T.O / T.val)}</span><span class="sub">${top3} e outros</span></div>`;
+
+// ---------- mapa ----------
+const svg = d3.select('#map');
+const box0 = svg.node().getBoundingClientRect();
+const W = Math.round(box0.width) || 900, H = Math.round(box0.height) || 640;
+svg.attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'xMidYMid meet');
+const defs = svg.append('defs');
+const pat = defs.append('pattern').attr('id', 'hatch').attr('patternUnits', 'userSpaceOnUse').attr('width', 6).attr('height', 6).attr('patternTransform', 'rotate(45)');
+pat.append('rect').attr('width', 6).attr('height', 6).style('fill', 'var(--land)');
+pat.append('line').attr('x1', 0).attr('y1', 0).attr('x2', 0).attr('y2', 6).style('stroke', 'var(--bairro-line)').attr('stroke-width', 1.4);
+
+const pts = { type: 'MultiPoint', coordinates: locais.map(d => [d.lon, d.lat]) };
+const proj = d3.geoMercator().fitExtent([[24, 64], [W - 24, H - (W < 560 ? 84 : 56)]], pts);
+const path = d3.geoPath(proj);
+const g = svg.append('g');
+g.append('rect').attr('x', -W * 6).attr('y', -H * 6).attr('width', W * 13).attr('height', H * 13).style('fill', 'var(--sea)');
+g.append('g').selectAll('path').data(GEO.vizinhos.features).join('path').attr('class', 'viz').attr('d', path);
+const bairroSel = g.append('g').selectAll('path').data(GEO.bairros.features).join('path')
+  .attr('class', d => 'bairro' + (bMap.has(d.properties.name) ? '' : ' empty')).attr('d', path);
+
+const waterLabels = [
+  { t: 'Lagoa Mundaú', c: [-35.787, -9.628] },
+  { t: 'Oceano Atlântico', c: [-35.655, -9.672] },
+];
+const vizLabels = [
+  { t: 'Marechal Deodoro', c: [-35.835, -9.69] }, { t: 'Coqueiro Seco', c: [-35.812, -9.632] },
+  { t: 'Santa Luzia do Norte', c: [-35.828, -9.598] }, { t: 'Satuba', c: [-35.82, -9.565] },
+  { t: 'Rio Largo', c: [-35.80, -9.525] }, { t: 'Paripueira', c: [-35.57, -9.47] },
+];
+const wl = g.append('g').selectAll('text').data(waterLabels).join('text').attr('class', 'wlabel')
+  .attr('x', d => proj(d.c)[0]).attr('y', d => proj(d.c)[1]).text(d => d.t);
+const vl = g.append('g').selectAll('text').data(vizLabels).join('text').attr('class', 'vlabel')
+  .attr('x', d => proj(d.c)[0]).attr('y', d => proj(d.c)[1]).text(d => d.t);
+
+const bfeat = GEO.bairros.features.map(f => ({ name: f.properties.name, c: path.centroid(f), a: path.area(f), f }));
+const labelNudge = { 'Ponta Verde': [6, 10], 'Pajuçara': [0, 6], 'Jaraguá': [0, -4], 'Centro': [0, 4] };
+const bl = g.append('g').selectAll('text').data(bfeat).join('text').attr('class', 'blabel')
+  .attr('x', d => d.c[0] + (labelNudge[d.name]?.[0] || 0)).attr('y', d => d.c[1] + (labelNudge[d.name]?.[1] || 0)).text(d => d.name);
+
+const vmax = d3.max(locais, d => d.val);
+const rS = Math.min(W, H) / 700;
+const rBase = d => (2.6 + 5.6 * Math.sqrt(d.val / vmax)) * Math.max(0.8, Math.min(1.25, rS));
+const dotsG = g.append('g');
+const dots = dotsG.selectAll('circle').data(locais.slice().sort((a, b) => b.val - a.val)).join('circle')
+  .attr('class', 'dot').attr('cx', d => proj([d.lon, d.lat])[0]).attr('cy', d => proj([d.lon, d.lat])[1]);
+
+let mode = 'win', k = 1, selected = null, hlBairro = null;
+const marg = () => d3.scaleDiverging([-0.3, 0, 0.3], t => t < 0.5
+  ? d3.interpolateRgb(css('--lula'), css('--mid'))(t * 2)
+  : d3.interpolateRgb(css('--mid'), css('--flavio'))((t - 0.5) * 2)).clamp(true);
+let scaleM = marg();
+const color = d => mode === 'win' ? (d.F > d.L ? css('--flavio') : css('--lula')) : scaleM(d.m);
+
+function paint() {
+  dots.attr('fill', color);
+  drawLegend();
+}
+function resize() {
+  dots.attr('r', d => rBase(d) / Math.pow(k, 0.75)).attr('stroke-width', d => (d === selected ? 2.4 : 0.9) / k);
+  bairroSel.attr('stroke-width', d => (d.properties.name === hlBairro ? 2.6 : 0.9) / k);
+  g.selectAll('.viz').attr('stroke-width', 0.8 / k);
+  bl.attr('font-size', 10.5 / k).attr('stroke-width', 3 / k)
+    .attr('display', d => (d.a * k * k > 2600 || k > 3.2 || d.name === hlBairro) ? null : 'none');
+  wl.attr('font-size', 17 / Math.sqrt(k));
+  vl.attr('font-size', 13 / Math.sqrt(k));
+}
+
+const zoom = d3.zoom().scaleExtent([1, 10]).translateExtent([[-W * 0.4, -H * 0.4], [W * 1.4, H * 1.4]])
+  .on('zoom', e => { k = e.transform.k; g.attr('transform', e.transform); resize(); });
+svg.call(zoom).on('dblclick.zoom', null);
+document.getElementById('z-in').onclick = () => svg.transition().duration(350).call(zoom.scaleBy, 1.6);
+document.getElementById('z-out').onclick = () => svg.transition().duration(350).call(zoom.scaleBy, 1 / 1.6);
+document.getElementById('z-rst').onclick = () => { setBairro(null); svg.transition().duration(450).call(zoom.transform, d3.zoomIdentity); };
+
+// seleção por proximidade (fica fácil no celular)
+const P = locais.map(d => proj([d.lon, d.lat]));
+const delaunay = d3.Delaunay.from(P);
+function nearest(ev) {
+  const t = d3.zoomTransform(svg.node());
+  const [mx, my] = t.invert(d3.pointer(ev, svg.node()));
+  const i = delaunay.find(mx, my);
+  const dist = Math.hypot(P[i][0] - mx, P[i][1] - my) * t.k;
+  const rect = svg.node().getBoundingClientRect();
+  const pxPerUnit = Math.min(rect.width / W, rect.height / H);
+  return dist * pxPerUnit < 28 ? locais[i] : null;
+}
+svg.on('pointermove', ev => { if (ev.pointerType === 'mouse' && ev.buttons === 0) { const d = nearest(ev); if (d) select(d); } });
+svg.on('click', ev => { const d = nearest(ev); if (d) select(d); });
+
+function select(d) {
+  if (selected === d) return;
+  selected = d;
+  dots.classed('sel', x => x === d);
+  dots.filter(x => x === d).raise();
+  resize();
+  showLocal(d);
+}
+
+// ---------- painel ----------
+const panel = document.getElementById('panel');
+function bars(o) {
+  const rows = [['Flávio Bolsonaro', o.F, o.pf, 'var(--flavio)'], ['Lula', o.L, o.pl, 'var(--lula)'], ['Outros', o.O, o.O / o.val, 'var(--ink-3)']];
+  return `<div class="bars">${rows.map(([n, v, p, c]) => `
+    <div class="bar"><span>${n}</span><span class="num">${pct(p)}</span>
+      <div class="track"><div class="fill" style="width:${p * 100}%;background:${c}"></div></div>
+      <span class="v num">${fmt(v)} votos</span></div>`).join('')}</div>`;
+}
+function verdict(o) {
+  const w = o.F > o.L, diff = Math.abs(o.F - o.L) / o.val;
+  return `<span class="verdict"><span class="sw ${w ? 'f' : 'l'}"></span>${w ? 'Flávio' : 'Lula'} por ${(diff * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} pontos</span>`;
+}
+function showLocal(d) {
+  const comp = d.ap ? (d.val + d.Br + d.Nu) / d.ap : null;
+  panel.innerHTML = `
+    <div><div class="eyebrow">${d.b}</div><h2>${d.nome}</h2><div class="meta">${d.end} · Zona ${d.z}</div></div>
+    ${verdict(d)}
+    ${bars(d)}
+    <dl class="facts">
+      <div><dt>Seções</dt><dd class="num">${d.s}</dd></div>
+      <div><dt>Eleitores aptos</dt><dd class="num">${d.ap ? fmt(d.ap) : '—'}</dd></div>
+      <div><dt>Comparecimento</dt><dd class="num">${comp ? pct(comp) : '—'}</dd></div>
+      <div><dt>Brancos + nulos</dt><dd class="num">${fmt(d.Br + d.Nu)}</dd></div>
+    </dl>
+    <p class="hint">${bMap.get(d.b) ? `No bairro ${d.b} como um todo: Flávio ${pct(bMap.get(d.b).pf)}, Lula ${pct(bMap.get(d.b).pl)}.` : ''}</p>`;
+}
+function showBairro(s) {
+  panel.innerHTML = `
+    <div><div class="eyebrow">Bairro</div><h2>${s.b}</h2><div class="meta">${s.n} ${s.n > 1 ? 'locais' : 'local'} de votação · ${fmt(s.ap)} eleitores aptos</div></div>
+    ${verdict(s)}
+    ${bars(s)}
+    <p class="hint">Toque num ponto do bairro para ver cada escola.</p>`;
+}
+function showCity() {
+  panel.innerHTML = `
+    <div><div class="eyebrow">Maceió inteira</div><h2>${fmt(T.val + T.Br + T.Nu)} votos em ${locais.length} locais</h2><div class="meta">${fmt(T.ap)} eleitores aptos</div></div>
+    ${verdict(T)}
+    ${bars(T)}
+    <p class="hint">Passe o mouse ou toque num ponto para ver o resultado daquele local de votação.</p>`;
+}
+
+// ---------- legenda ----------
+function drawLegend() {
+  const el = document.getElementById('legend');
+  if (mode === 'win') {
+    el.innerHTML = `<div class="row"><span class="item"><span class="sw f"></span>Flávio venceu <span class="num" style="color:var(--ink-3)">${winsF}</span></span><span class="item"><span class="sw l"></span>Lula venceu <span class="num" style="color:var(--ink-3)">${winsL}</span></span></div>`;
+  } else {
+    const stops = d3.range(0, 1.0001, 0.1).map(t => scaleM(-0.3 + 0.6 * t)).join(',');
+    el.innerHTML = `<div>Diferença entre os dois, em pontos</div><div class="ramp" style="background:linear-gradient(90deg,${stops})"></div><div class="ramp-labels"><span>Lula +30</span><span>empate</span><span>Flávio +30</span></div>`;
+  }
+}
+function setMode(m) {
+  mode = m;
+  document.getElementById('m-win').setAttribute('aria-pressed', m === 'win');
+  document.getElementById('m-mrg').setAttribute('aria-pressed', m === 'mrg');
+  paint();
+}
+document.getElementById('m-win').onclick = () => setMode('win');
+document.getElementById('m-mrg').onclick = () => setMode('mrg');
+
+// ---------- lista de bairros ----------
+const list = document.getElementById('list');
+const sx = p => Math.min(Math.max(p - 0.5, 0), 0.1) / 0.1 * 50; // 50%→0, 60%→50% da largura
+list.innerHTML = byB.map(s => {
+  const two = s.L + s.F, tl = s.L / two, tf = s.F / two;
+  const w = s.m > 0;
+  return `<button class="li" data-b="${s.b}">
+    <span class="nm">${s.b}<small>${s.n} ${s.n > 1 ? 'locais' : 'local'}</small></span>
+    <span class="dv"><span class="axis"></span>${tl > 0.5 ? `<span class="seg-l" style="width:${sx(tl)}%"></span>` : ''}${tf > 0.5 ? `<span class="seg-f" style="width:${sx(tf)}%"></span>` : ''}</span>
+    <span class="mg num" style="color:${w ? 'var(--flavio)' : 'var(--lula)'}">${w ? 'F' : 'L'} +${(Math.abs(s.m) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })}</span>
+  </button>`;
+}).join('');
+list.querySelectorAll('.li').forEach(btn => btn.onclick = () => {
+  const name = btn.dataset.b;
+  setBairro(name);
+  document.querySelector('.mapcard').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+});
+
+function setBairro(name) {
+  hlBairro = name;
+  list.querySelectorAll('.li').forEach(b => b.classList.toggle('on', b.dataset.b === name));
+  bairroSel.classed('hl', d => d.properties.name === name);
+  if (!name) { selected = null; dots.classed('sel', false); resize(); showCity(); return; }
+  const f = GEO.bairros.features.find(x => x.properties.name === name);
+  const [[x0, y0], [x1, y1]] = path.bounds(f);
+  const kk = Math.min(8, 0.7 / Math.max((x1 - x0) / W, (y1 - y0) / H));
+  const t = d3.zoomIdentity.translate(W / 2, H / 2).scale(kk).translate(-(x0 + x1) / 2, -(y0 + y1) / 2);
+  svg.transition().duration(650).call(zoom.transform, t);
+  selected = null; dots.classed('sel', false);
+  bairroSel.filter(d => d.properties.name === name).raise();
+  dotsG.raise();
+  showBairro(bMap.get(name));
+  resize();
+}
+
+// re-pinta quando o tema muda
+const recolor = () => { scaleM = marg(); paint(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', recolor);
+new MutationObserver(recolor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+paint(); resize(); showCity();
+</script>
